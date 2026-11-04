@@ -1,0 +1,56 @@
+"""
+INPUT: 
+    Lattice basis B of size n as an array of integer arrays
+    Parameter δ with 1/4 < δ < 1, usually 3/4
+OUTPUT of LLL: 
+    Reduced basis for B
+INTERMEDIATE VARIABLES: 
+    Unnormalized Gram-Schmidt basis B* of B, 
+    μ[i][j] = <B[i], B*[j]>/<B*[i], B*[j]>
+"""
+
+import numpy as np
+
+def SizeReduce(B, R, k):
+    for j in range(k-1, -1, -1):
+        mu = R[j][k]/R[j][j]
+        if abs(mu) > 0.5:
+            B[:, k] -= round(mu) * B[:, j]
+            R[:, k] -= round(mu) * R[:, j]
+    return B, R
+        
+def SwapReduce(B, delta, R, k):
+    i = 0
+    V = R[k-1][k]**2
+    while i < k and delta*(R[k-i-1][k-i-1]**2) > R[k][k]**2 + V:
+        i += 1
+        if i < k:
+            V += R[k-i-1][k]**2
+    if i > 0:
+        # Insert b_k before b_{k-i}, shifting everything forward
+        B[:, k-i : k+1] = np.roll(B[:, k-i : k+1], shift=1, axis=1)
+        R = np.linalg.qr(B, mode="r")
+        k -= i
+    return B, R, k
+    
+def LLL(B, delta, mu):
+    n = B.shape[1]
+    R = np.linalg.qr(B, mode="r")
+    k = 1
+    while k < n:
+        B, R = SizeReduce(B, R, k)
+        B, R, k = SwapReduce(B, delta, R, k)
+        k = k + 1
+    print("Result:", B)
+    return B
+    
+B = np.array([
+[1,5], [2,3]
+])
+LLL(B, 0.9, 0.5)
+B = np.array([
+[6,7],
+[1,1]
+])
+LLL(B, 0.9, 0.5)
+LLL(np.array([[7,2,3],[4,5,6],[7,8,9]]),0.99,0.5)
