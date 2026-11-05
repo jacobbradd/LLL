@@ -4,9 +4,6 @@ INPUT:
     Parameter δ with 1/4 < δ < 1, usually 3/4
 OUTPUT of LLL: 
     Reduced basis for B
-INTERMEDIATE VARIABLES: 
-    Unnormalized Gram-Schmidt basis B* of B, 
-    μ[i][j] = <B[i], B*[j]>/<B*[i], B*[j]>
 """
 
 import numpy as np
@@ -29,11 +26,14 @@ def SwapReduce(B, delta, R, k):
     if i > 0:
         # Insert b_k before b_{k-i}, shifting everything forward
         B[:, k-i : k+1] = np.roll(B[:, k-i : k+1], shift=1, axis=1)
-        R = np.linalg.qr(B, mode="r")
+        R[:, k-i : k+1] = np.roll(R[:, k-i : k+1], shift=1, axis=1)
+        
+        Givens, _ = np.linalg.qr(R[k-i:k+1, k-i:k+1])
+        R[k-i:k+1, :] = Givens.T @ R[k-i:k+1, :]
         k -= i
     return B, R, k
     
-def LLL(B, delta, mu):
+def LLL(B, delta):
     n = B.shape[1]
     R = np.linalg.qr(B, mode="r")
     k = 1
@@ -47,10 +47,10 @@ def LLL(B, delta, mu):
 B = np.array([
 [1,5], [2,3]
 ])
-LLL(B, 0.9, 0.5)
+LLL(B, 0.9)
 B = np.array([
 [6,7],
 [1,1]
 ])
-LLL(B, 0.9, 0.5)
-LLL(np.array([[7,2,3],[4,5,6],[7,8,9]]),0.99,0.5)
+LLL(B, 0.9)
+LLL(np.array([[7,2,3],[4,5,6],[7,8,9]]),0.99)
