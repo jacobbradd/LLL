@@ -7,7 +7,7 @@
 
 import numpy as np
 
-def Householder(u):
+def householder(u):
     u=u.copy().astype(np.float64) #just in case
     if np.all(u[1:] == 0):
         return np.eye(len(u))
@@ -15,20 +15,20 @@ def Householder(u):
     return np.eye(len(u)) - 2*np.outer(u,u)/np.dot(u,u)
     
 # This is slow but very easy
-def QR(B):
+def householder_qr(B):
     m, n = B.shape
     Q = np.eye(m)
     R = B.copy()
     for k in range(0, n-1):
         H_k = np.eye(m)
-        H_k[k:,k:] = Householder(R[k:, k])
+        H_k[k:,k:] = householder(R[k:, k])
         Q = Q @ H_k
         R = H_k @ R
     return Q, R
     
 # Combines Householder and QR in one step. Surprisingly decent.
 # Future exercise is to bring it to "Level 3"
-def QR_Combined(B):
+def qr_combined(B):
     m, n = B.shape
     Q = np.eye(m)
     R = B.copy().astype(np.float64)
@@ -45,10 +45,10 @@ B = np.array([
 [3,5],
 [4,2]
 ])
-print(Householder(B[:,0]))
+print(householder(B[:,0]))
 
-print(QR(B))
-print(QR_Combined(B))
+print(householder_qr(B))
+print(qr_combined(B))
 print(np.linalg.qr(B))
 
 
@@ -64,8 +64,8 @@ import time
 #_,_ = QR(B)
 #print("QR:", time.perf_counter()-start)
 start = time.perf_counter()
-_,_ = QR_Combined(B)
-print("QR_Combined:", time.perf_counter()-start)
+_,_ = qr_combined(B)
+print("qr_Combined:", time.perf_counter()-start)
 start = time.perf_counter()
 _,_ = np.linalg.qr(B, mode='reduced')
 print("numpy:", time.perf_counter()-start)   
