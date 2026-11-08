@@ -46,8 +46,9 @@ def qr_combined(B):
         if np.all(u[1:] == 0):
             continue
         u[0] += np.copysign(np.linalg.norm(u), u[0])
-        Q[:,k:] -= (2/np.dot(u,u))*np.outer(Q[:,k:] @ u, u)
-        R[k:,k:] -= (2/np.dot(u,u))*np.outer(u, u @ R[k:,k:])
+        tau = (2/np.dot(u,u))
+        Q[:,k:] -= tau*np.outer(Q[:,k:] @ u, u)
+        R[k:,k:] -= tau*np.outer(u, u @ R[k:,k:])
     return Q, R
 
 # The "WY" method (named for whatever reason by Bischof-Van Loan)
