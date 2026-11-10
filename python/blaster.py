@@ -1,5 +1,5 @@
 # Just pseudocode essentially of Ducas-Pulles-Stevens BLASter algorithm
-# Definitely unoptimised and currently slower than just running lll_reduction
+# Definitely unoptimised
 
 
 import numpy as np
@@ -40,7 +40,7 @@ def _lll_worker(task):
     return i, p, lll_reduction(slice, delta)
 
 
-def blaster_parallel_attempt(B, delta=0.75, block=64, iter_budget=-1, workers=None):
+def blaster_parallel_attempt(B, delta=0.75, block=128, iter_budget=-1, workers=None):
     i0 = 0
     m, n = B.shape
     with ProcessPoolExecutor(max_workers=workers) as executor: # Parallel
@@ -71,7 +71,7 @@ def check_weak_reduced(B, delta=0.75):
 import os    
 if __name__ == "__main__":
     rng = np.random.default_rng(43)
-    B = rng.integers(-10**5, 10**5, size=(1000, 1000))
+    B = rng.integers(-10**6, 10**6, size=(10000, 10000))
     
     print(B)
     import time
@@ -83,6 +83,6 @@ if __name__ == "__main__":
     time_fn("blaster", blaster, B.copy())
     time_fn("blaster (parallel attempt)", blaster_parallel_attempt, B.copy(), workers=os.cpu_count())
     time_fn("lll_reduction", lll_reduction, B.copy())
-    print(check_weak_reduced(blaster(B.copy())))
-    print(check_weak_reduced(B @ lll_reduction(B.copy())))
+    #print(check_weak_reduced(blaster(B.copy())))
+    #print(check_weak_reduced(B @ lll_reduction(B.copy())))
     
