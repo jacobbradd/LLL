@@ -70,7 +70,7 @@ def qr_wy(B, b = 64):
                 T[:j,j] = -tau * T[:j,:j] @ (V[:, :j].T @ V[:, j])
             # Need to update R the least amount to compute the next householder (see qr_combined)
             R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p])
-        R[k:, k+p:] -= V @ (T @ (V.T @ R[k:, k+p:]))
+        R[k:, k+p:] -= V @ (T.T @ (V.T @ R[k:, k+p:]))
         Q[:, k:] -= ((Q[:, k:] @ V) @ T) @ V.T
     return Q,R
     
@@ -92,7 +92,11 @@ time_fn = lambda label, f, *args, **kwargs: (
     print(f"{label}: {time.perf_counter() - s:.6f}s")
 )
 
-B = rng.integers(low=10000, high=1000000000, size=(2000, 2000))
+B = rng.integers(low=10000, high=1000000000, size=(500, 500))
 time_fn("qr_wy", qr_wy, B)
-time_fn("numpy", np.linalg.qr, B)
+time_fn("numpy", np.linalg.qr, B, mode="reduced")
 
+
+print(qr_wy(B))
+
+print(np.linalg.qr(B))
