@@ -1,9 +1,12 @@
 # LLL Expository Code
 This repository is primarily intended to consist of "easy" implementations of LLL, for understanding the algorithm. This assumes the rank of the lattice is equal to the ambient dimension (i.e. the basis matrix is a square matrix), since this is intended for cryptographic purposes.
 
-- `Python/LLL_Pseudocode.py` contains a python-like adaptation of the pseudocode on wikipedia.
-- `Python/naive_lll_numpy.py` contains an actual, minimal python implementation of the naive LLL algorithm. There are a couple "improvements": instead of computing the unnormalized Gram-Schmidt $B^*$ and the $\mu$, we only compute the $R$ in the $QR$ decomposition, which contains all relevant information. Second, we perform multiple swaps in one pass using the `roll` function, following the LLL algorithm given in Nguyen and Stehlé (not the $L^2$ algorithm). It is "naive" because it performs floating point arithmetic without any regard for precision.
+- `python/LLL_Pseudocode.py` contains a python-like adaptation of the pseudocode on wikipedia.
+- `python/naive_lll_numpy.py` contains an actual, minimal python implementation of the naive LLL algorithm. There are a couple "improvements": instead of computing the unnormalized Gram-Schmidt $B^*$ and the $\mu$, we only compute the $R$ in the $QR$ decomposition, which contains all relevant information. Second, we perform multiple swaps in one pass using the `roll` function, following the LLL algorithm given in Nguyen and Stehlé (not the $L^2$ algorithm). It is "naive" because it performs floating point arithmetic without any regard for precision.
+- `python/blaster.py` is "working pseudocode" of the BLASter algorithm by Ducas, Pulles and Stevens. I currently do not have a strong explanation, other than it uses Householder matrices for $QR$ (as `numpy` does) and Seysen reduction (done recursively on block halves) for numerical stability, and that it reduces the lattice matrix on blocks to perform the reduction in parallel (and let BLAS do its job).  One drawback is that it is currently for machine-precision numbers, which is not suitable for cryptographic purposes. Also, my pseudocode is slow.
 
+
+### Note 1
 A note on Nguyen and Stehlé: they check the Lovasz condition without swaps, eventually inserting $b_k$ at the first admissible position. The relevant line of code reads as follows:
 
 - `4.` $\kappa' \leftarrow \kappa$. While $\kappa \geq 2$ and $\delta \cdot r_{\kappa-1, \kappa-1} > r_{\kappa', \kappa'} + \sum_{i = \kappa-1}^{\kappa'-1} \mu^2_{\kappa', i}r_{i,i}$ do $\kappa \leftarrow \kappa-1$.

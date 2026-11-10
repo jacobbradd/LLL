@@ -53,10 +53,10 @@ def qr_combined(B):
 
 # The "WY" method (named for whatever reason by Bischof-Van Loan)
 # The point is you can assemble the product H_i .. H_j by hand given the Householder vectors u_i .. u_j
-# They calculated this product, a small trick is to keep track of the \tau = 2/\|u\|^2
+# Bischof-Van Loan calculated this product, a small trick is to keep track of the \tau = 2/\|u\|^2
 # The u's assemble into a matrix V, the \tau's help assemble a matrix T,  then the product is I - VT(V^T)
 # Batch 64-128 looks decent for 4000+, 32 for a good lower range
-def qr_wy(B, b = 32):
+def qr_wy(B, b = 64):
     m, n = B.shape
     Q, R = np.eye(m), B.copy().astype(np.float64)
     for k in range(0, n, b):
@@ -68,44 +68,31 @@ def qr_wy(B, b = 32):
             T[j,j] = tau
             if j > 0:
                 T[:j,j] = -tau * T[:j,:j] @ (V[:, :j].T @ V[:, j])
-            # Need to update R the least amount to compute the next householder
+            # Need to update R the least amount to compute the next householder (see qr_combined)
             R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p])
         R[k:, k+p:] -= V @ (T @ (V.T @ R[k:, k+p:]))
         Q[:, k:] -= ((Q[:, k:] @ V) @ T) @ V.T
     return Q,R
     
     
-B = np.array([
-[3,5],
-[4,2]
-])
-print(householder(B[:,0]))
-
+B = np.array([[3,5],[4,2]])
 print(householder_qr(B))
 print(qr_combined(B))
-print("lvl3", qr_wy(B))
+print(qr_wy(B))
 print(np.linalg.qr(B))
 
 
 rng = np.random.default_rng()
 
-B = rng.standard_normal((500, 500))
-B = rng.integers(low=1, high=101, size=(2000, 2000))
-
-
 
 import time
-#start = time.perf_counter()
-#_,_ = QR(B)
-#print("QR:", time.perf_counter()-start)
-#start = time.perf_counter()
-#_,_ = qr_combined(B)
-#print("qr_combined:", time.perf_counter()-start)
-#for b in [16, 32, 64, 96, 128, 192, 256]:
-start = time.perf_counter()
-_,_ = qr_wy(B)
-print("qr_wy:", time.perf_counter()-start)
-start = time.perf_counter()
-_,_ = np.linalg.qr(B)
-print("numpy:", time.perf_counter()-start)   
+time_fn = lambda label, f, *args, **kwargs: (
+    s := time.perf_counter(), 
+    f(*args, **kwargs), 
+    print(f"{label}: {time.perf_counter() - s:.6f}s")
+)
+
+B = rng.integers(low=10000, high=1000000000, size=(2000, 2000))
+time_fn("qr_wy", qr_wy, B)
+time_fn("numpy", np.linalg.qr, B)
 
