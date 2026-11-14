@@ -22,7 +22,7 @@ int main(){
     gr_mat_t A;
     gr_mat_init(A, 2,2, RR);
     STAT(gr_mat_set_str(A, "[[10.,1.],[2.,2.]]", 0, RR));
-	printf("\n====\nTESTING REPEATED SQUARING\n====\n");
+    TESTPR("REPEATED SQUARING");
     for(int i = 0; i < 3; i++){
         STAT(gr_mat_mul(A,A,A,RR));
 	}
