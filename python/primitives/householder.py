@@ -56,14 +56,16 @@ def qr_combined(B):
 # Bischof-Van Loan calculated this product, a small trick is to keep track of the \tau = 2/\|u\|^2
 # The u's assemble into a matrix V, the \tau's help assemble a matrix T,  then the product is I - VT(V^T)
 # Batch 64-128 looks decent for 4000+, 32 for a good lower range
-def qr_wy(B, b = 64):
+def qr_wy(B, b = 64, r_mode = False):
+    if r_mode == True:
+        return qr_wy_r_mode(B, b)
     m, n = B.shape
     Q, R = np.eye(m), B.copy().astype(np.float64)
     for k in range(0, n, b):
         p = min(b, n-k)
         V, T = np.zeros((m-k, p)), np.zeros((p, p))
         for j in range(p):
-            u, tau = householder(R[k+j:, k+j])
+            u, tau = householder(R[k+j:, k+j]) 
             V[j:, j] = u
             T[j,j] = tau
             if j > 0:
@@ -74,29 +76,19 @@ def qr_wy(B, b = 64):
         Q[:, k:] -= ((Q[:, k:] @ V) @ T) @ V.T
     return Q,R
     
-    
-B = np.array([[3,5],[4,2]])
-print(householder_qr(B))
-print(qr_combined(B))
-print(qr_wy(B))
-print(np.linalg.qr(B))
-
-
-rng = np.random.default_rng()
-
-
-import time
-time_fn = lambda label, f, *args, **kwargs: (
-    s := time.perf_counter(), 
-    f(*args, **kwargs), 
-    print(f"{label}: {time.perf_counter() - s:.6f}s")
-)
-
-B = rng.integers(low=10000, high=1000000000, size=(500, 500))
-time_fn("qr_wy", qr_wy, B)
-time_fn("numpy", np.linalg.qr, B, mode="reduced")
-
-
-print(qr_wy(B))
-
-print(np.linalg.qr(B))
+def qr_wy_r_mode(B, b = 64):
+    m, n = B.shape
+    R = B.copy().astype(np.float64)
+    for k in range(0, n, b):
+        p = min(b, n-k)
+        V, T = np.zeros((m-k, p)), np.zeros((p, p))
+        for j in range(p):
+            u, tau = householder(R[k+j:, k+j])
+            V[j:, j] = u 
+            T[j,j] = tau
+            if j > 0:
+                T[:j,j] = -tau * T[:j,:j] @ (V[:, :j].T @ V[:, j])
+            # Need to update R the least amount to compute the next householder (see qr_combined)
+            R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p]) 
+        R[k:, k+p:] -= V @ (T.T @ (V.T @ R[k:, k+p:]))
+    return R   
