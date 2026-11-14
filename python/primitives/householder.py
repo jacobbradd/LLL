@@ -24,7 +24,7 @@ def householder_matrix(u):
     return np.eye(len(u)) - 2*np.outer(u,u)/np.dot(u,u)
     
 # This is slow but very easy
-def householder_qr(B):
+def qr_householder(B):
     m, n = B.shape
     Q = np.eye(m)
     R = B.copy()
