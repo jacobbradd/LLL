@@ -10,9 +10,10 @@ bool status = 0;
 bool quiet = false;
 bool flint_qr = false;
 bool time_it = false;
+slong bits = 64;
 void process_args(int argc, char **argv){
     int c= 0;
-    while((c = getopt(argc, argv, "fqt")) != -1){
+    while((c = getopt(argc, argv, "fqtb:")) != -1){
         switch(c){
             case 'q':
                 quiet = true;
@@ -22,6 +23,9 @@ void process_args(int argc, char **argv){
                 break;
             case 't':
                 time_it = true;
+                break;
+            case 'b':
+                bits = atoi(optarg);
                 break;
             case '?':
                 printf("Unknown command -%c\n", optopt);
@@ -40,8 +44,11 @@ double get_time(void) {
 int main(int argc, char **argv){
     process_args(argc, argv);
     gr_ctx_t RR;
-    //nfloat_ctx_init(RR, 64, 0);
-    gr_ctx_init_dfloat(RR,1,0); 
+    if(bits > 64) {
+        nfloat_ctx_init(RR, bits, 0);
+    } else {
+        gr_ctx_init_dfloat(RR,1,0); 
+    }
     gr_mat_t A, Q, R;
     gr_mat_init(A, 0,0, RR);
     
@@ -61,6 +68,7 @@ int main(int argc, char **argv){
     }else{
         gr_mat_init(R, A->r, A->c, RR);
         house_qr(R, A, RR, 64);
+        //house_lq_qr(R, A, RR, 64);
     }
     double end = get_time();
     if(!quiet){

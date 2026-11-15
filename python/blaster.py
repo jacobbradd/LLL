@@ -5,8 +5,8 @@
 import numpy as np
 from numpy_naive_lll import lll_reduction
 from primitives.seysen import seysen
-
-    
+from primitives.cholesky import qr_cholesky
+import scipy as sp
 def lovasz_check(R, delta=0.75):
     d = np.diag(R)
     return np.all(delta * d[:-1]**2 <= d[1:]**2 + np.diag(R, k=1)**2)
@@ -18,14 +18,16 @@ def blaster(B, delta=0.75, block=64, iter_budget=-1):
     while iter_budget != 0:
         iter_budget -= 1
         i0 = block//2 - i0
-        R = np.linalg.qr(B, mode="r")
+        R = qr_cholesky(B)
+        #R = np.linalg.qr(B, mode="r")
         Vs = []
         for i in range(i0, n, block):
             p = min(block, n - i)
             Vs.append((i, p, lll_reduction(R[i:i+p, i:i+p], delta))) #should do in parallel
         for i, p, V in Vs:
             B[:, i:i+p] = B[:, i:i+p] @ V
-        R = np.linalg.qr(B, mode="r")
+        #R = np.linalg.qr(B, mode="r")
+        R = qr_cholesky(B)
         W, R = seysen(R)
         B = B @ W
         if lovasz_check(R, delta):
@@ -47,14 +49,16 @@ def blaster_parallel_attempt(B, delta=0.75, block=128, iter_budget=-1, workers=N
         while iter_budget != 0:
             iter_budget -= 1
             i0 = block//2 - i0
-            R = np.linalg.qr(B, mode="r")
+            R = qr_cholesky(B)
+            #R = np.linalg.qr(B, mode="r")
             ### Parallel part: should really be multiplying B in parallel too? (It's not in the paper)
             tasks = [(i, min(block, n - i), R[i:i+min(block, n-i), i:i+min(block, n-i)], delta)
                         for i in range(i0, n, block)]
             for i, p, V in executor.map(_lll_worker,tasks):
                 B[:, i:i+p] = B[:, i:i+p] @ V
             ###
-            R = np.linalg.qr(B, mode="r")
+            R = qr_cholesky(B)
+            #R = np.linalg.qr(B, mode="r")
             W, R = seysen(R)
             B = B @ W
             if lovasz_check(R, delta):
@@ -71,8 +75,9 @@ def check_weak_reduced(B, delta=0.75):
 import os    
 if __name__ == "__main__":
     rng = np.random.default_rng(43)
-    B = rng.integers(-10**6, 10**6, size=(10000, 10000))
-    
+    B = rng.integers(-2**32, 2**32, size=(5000, 5000)).astype(np.float64)
+    np.linalg.solve(B, B) #warmup
+    sp.linalg.solve(B, B) #warmup
     print(B)
     import time
     time_fn = lambda label, f, *args, **kwargs: (

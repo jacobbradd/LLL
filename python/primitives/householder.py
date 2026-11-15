@@ -61,15 +61,15 @@ def qr_wy(B, b = 64, r_mode = False):
         return qr_wy_r_mode(B, b)
     m, n = B.shape
     Q, R = np.eye(m), B.copy().astype(np.float64)
-    for k in range(0, n, b):
-        p = min(b, n-k)
+    for k in range(0, min(m,n), b):
+        p = min(b, min(m,n)-k)
         V, T = np.zeros((m-k, p)), np.zeros((p, p))
         for j in range(p):
             u, tau = householder(R[k+j:, k+j]) 
             V[j:, j] = u
             T[j,j] = tau
             if j > 0:
-                T[:j,j] = -tau * T[:j,:j] @ (V[:, :j].T @ V[:, j])
+                T[:j,j] = -tau * T[:j,:j] @ (V[j:, :j].T @ u)
             # Need to update R the least amount to compute the next householder (see qr_combined)
             R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p])
         R[k:, k+p:] -= V @ (T.T @ (V.T @ R[k:, k+p:]))
@@ -79,16 +79,36 @@ def qr_wy(B, b = 64, r_mode = False):
 def qr_wy_r_mode(B, b = 64):
     m, n = B.shape
     R = B.copy().astype(np.float64)
-    for k in range(0, n, b):
-        p = min(b, n-k)
+    for k in range(0, min(m,n), b):
+        p = min(b, min(m,n)-k)
         V, T = np.zeros((m-k, p)), np.zeros((p, p))
         for j in range(p):
             u, tau = householder(R[k+j:, k+j])
             V[j:, j] = u 
             T[j,j] = tau
             if j > 0:
-                T[:j,j] = -tau * T[:j,:j] @ (V[:, :j].T @ V[:, j])
+                T[:j,j] = -tau * T[:j,:j] @ (V[j:, :j].T @ u)
             # Need to update R the least amount to compute the next householder (see qr_combined)
             R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p]) 
         R[k:, k+p:] -= V @ (T.T @ (V.T @ R[k:, k+p:]))
     return R   
+    
+
+def qr_lq_r_mode(B, b = 64):
+    m, n = B.T.shape
+    R = B.T.copy().astype(np.float64)
+    for k in range(0, min(m,n), b):
+        p = min(b, min(m,n)-k)
+        V, T = np.zeros((p,n-k)), np.zeros((p, p))
+        for j in range(p):
+            u, tau = householder(R[k+j, k+j:])
+            V[j, j:] = u 
+            T[j,j] = tau
+            if j > 0:
+                T[:j,j] = -tau * T[:j,:j] @ (V[:j, j:] @ u)
+            # Need to update R the least amount to compute the next householder (see qr_combined)
+            R[k+j:k+p,k+j:] -= tau * np.outer(R[k+j:k+p,k+j:] @ u, u) 
+        W = R[k+p:,k:] @ V.T
+        W = W @ T
+        R[k+p:,k:] -= W @ V
+    return R.T   
