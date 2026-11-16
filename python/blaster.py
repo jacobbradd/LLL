@@ -75,7 +75,7 @@ def check_weak_reduced(B, delta=0.75):
 import os    
 if __name__ == "__main__":
     rng = np.random.default_rng(43)
-    B = rng.integers(-2**32, 2**32, size=(5000, 5000)).astype(np.float64)
+    B = rng.integers(-2**32, 2**32, size=(2000, 2000)).astype(np.float64)
     np.linalg.solve(B, B) #warmup
     sp.linalg.solve(B, B) #warmup
     print(B)
@@ -88,6 +88,3 @@ if __name__ == "__main__":
     time_fn("blaster", blaster, B.copy())
     time_fn("blaster (parallel attempt)", blaster_parallel_attempt, B.copy(), workers=os.cpu_count())
     time_fn("lll_reduction", lll_reduction, B.copy())
-    #print(check_weak_reduced(blaster(B.copy())))
-    #print(check_weak_reduced(B @ lll_reduction(B.copy())))
-    

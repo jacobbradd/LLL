@@ -6,21 +6,29 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+enum mode_t {NORMAL, FLINT, LQ};
 bool status = 0;
 bool quiet = false;
-bool flint_qr = false;
+enum mode_t mode = 0;
 bool time_it = false;
 slong bits = 64;
 void process_args(int argc, char **argv){
     int c= 0;
-    while((c = getopt(argc, argv, "fqtb:")) != -1){
+    while((c = getopt(argc, argv, "fqtb:l")) != -1){
         switch(c){
             case 'q':
                 quiet = true;
                 break;
             case 'f':
-                flint_qr = true;
+                mode = FLINT;
                 break;
+			case 'l':
+				if(mode != NORMAL){
+					printf("Both -f and -l are set: choosing -f.\n");
+					break;
+				}
+				mode = LQ;
+				break;
             case 't':
                 time_it = true;
                 break;
@@ -59,17 +67,16 @@ int main(int argc, char **argv){
     free(matrix_input);
     
     double start = get_time();
-
-    if(flint_qr){
-        gr_mat_init(R, A->r, A->r, RR);
+	gr_mat_init(R, A->r, A->r, RR);
+    if(mode == FLINT){
         gr_mat_init(Q, A->r, A->c, RR);
         STAT(gr_mat_qr(Q, R, A, RR));
         gr_mat_clear(Q, RR);
-    }else{
-        gr_mat_init(R, A->r, A->c, RR);
+    }else if(mode == NORMAL){
         house_qr(R, A, RR, 64);
-        //house_lq_qr(R, A, RR, 64);
-    }
+    }else{
+        house_lq_qr(R, A, RR, 64);
+	}
     double end = get_time();
     if(!quiet){
         flint_printf("A: %{gr_mat}\nR: %{gr_mat}\n", A, RR, R, RR); 

@@ -7,7 +7,6 @@ def cholesky(G):
     m = G.shape[0]
     mh = m//2
     RA = cholesky(G[:mh, :mh])
-    #S = np.linalg.solve(RA.T, G[:mh, mh:])
     if mh < 64:
         S = np.linalg.solve(RA.T, G[:mh, mh:])
     else:

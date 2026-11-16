@@ -16,5 +16,5 @@ $(TARGET): %:%.c $(INC)
 	$(CC) $(CFLAGS) $< -o $@ $(FLLIB)
 
 
-clean: $(TARGET)
-	rm $(TARGET)
+clean:
+	rm -f $(TARGET)

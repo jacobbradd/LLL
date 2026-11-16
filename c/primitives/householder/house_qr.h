@@ -36,7 +36,8 @@ void householder(gr_mat_t res, gr_ptr tau, gr_mat_t vect, gr_ctx_t ctx){
 }
 void house_qr(gr_mat_t R, gr_mat_t A, gr_ctx_t ctx, unsigned block){
     slong m = gr_mat_nrows(A, ctx), n = gr_mat_ncols(A, ctx);
-    slong bound = m < n ? m : n;	
+    slong lbound = m < n ? m : n;	
+    slong ubound = m > n ? m : n;	
     gr_mat_t Vst,Tst, ust;
     gr_mat_init(Vst,m,block,ctx);
     gr_mat_init(Tst,block,block,ctx);
@@ -45,18 +46,14 @@ void house_qr(gr_mat_t R, gr_mat_t A, gr_ctx_t ctx, unsigned block){
     gr_ptr tau, negtau;
     GR_TMP_INIT2(tau, negtau, ctx);
 	//<scratch>
-	gr_mat_t tempst, wtempst, outerst, W1st, W2st, W3st;
-	gr_mat_init(tempst, block, 1, ctx);
-	gr_mat_init(wtempst, 1, n, ctx);	
-	gr_mat_init(outerst, m, n, ctx);
-	gr_mat_init(W1st, block, n, ctx);
-	gr_mat_init(W2st, block, n, ctx);
-	gr_mat_init(W3st, m, n, ctx);
+	gr_mat_t scratch, scratch2;
+	gr_mat_init(scratch, ubound, ubound, ctx);
+	gr_mat_init(scratch2, ubound, ubound, ctx);
 	//</scratch>
     STAT(gr_mat_set(R, A, ctx));
-    for(unsigned k = 0; k < bound; k+=block){
+    for(unsigned k = 0; k < lbound; k+=block){
         unsigned p = block;
-        if(p > bound-k) p = bound-k;
+        if(p > lbound-k) p = lbound-k;
         gr_mat_t V, T;
         gr_mat_window_init(V, Vst, 0, 0, m-k, p, ctx);
         gr_mat_window_init(T, Tst, 0, 0, p, p, ctx);
@@ -81,7 +78,7 @@ void house_qr(gr_mat_t R, gr_mat_t A, gr_ctx_t ctx, unsigned block){
                 gr_mat_t temp;
                 gr_mat_t Vtransp;
                 GR_MAT_TMP_INIT_SHALLOW_TRANSPOSE(Vtransp,Vright,ctx);
-                gr_mat_window_init(temp, tempst, 0,0, Vtransp->r, 1, ctx);
+                gr_mat_window_init(temp, scratch, 0,0, Vtransp->r, 1, ctx);
                 STAT(gr_mat_mul(temp, Vtransp, u, ctx));
                 STAT(gr_mat_mul(Tleft, Tblock, temp, ctx));
                 STAT(gr_mat_scalar_mul(Tleft, negtau, Tleft,ctx));
@@ -89,12 +86,13 @@ void house_qr(gr_mat_t R, gr_mat_t A, gr_ctx_t ctx, unsigned block){
                 GR_MAT_TMP_CLEAR_SHALLOW_TRANSPOSE(Vtransp, ctx);
             }
             {//R[k+j:, k+j:k+p] -= tau * np.outer(u, u @ R[k+j:, k+j:k+p]) (-= tau * (u @ (u.T @ R[])))
+			//should do manually: rank 1 updates are fast
 				gr_mat_t uT;
 				GR_MAT_TMP_INIT_SHALLOW_TRANSPOSE(uT, u, ctx);
 				gr_mat_t wtemp, outer;
-				gr_mat_window_init(wtemp, wtempst, 0, 0, uT->r, Rblock1->c, ctx);
+				gr_mat_window_init(wtemp, scratch, 0, 0, uT->r, Rblock1->c, ctx);
 				STAT(gr_mat_mul(wtemp, uT, Rblock1, ctx));
-				gr_mat_window_init(outer, outerst, 0, 0, u->r, wtemp->c, ctx);
+				gr_mat_window_init(outer, scratch2, 0, 0, u->r, wtemp->c, ctx);
 				STAT(gr_mat_mul(outer, u, wtemp, ctx));
 				STAT(gr_mat_scalar_mul(outer, negtau, outer, ctx));
 				STAT(gr_mat_add(Rblock1, Rblock1, outer, ctx));
@@ -111,22 +109,21 @@ void house_qr(gr_mat_t R, gr_mat_t A, gr_ctx_t ctx, unsigned block){
             gr_mat_window_clear(u, ctx);
         }
 		{// R[k:, k+p:] -= V @ (T.T @ (V.T @ R[k:, k+p:]))
-			gr_mat_t Rblock3, W1, W2, W3, VT, TT;
+		//todo: T multiplication can be improved as it is triangular
+			gr_mat_t Rblock3, W1, W3, VT, TT;
 			gr_mat_window_init(Rblock3, R, k, k+p, R->r, R->c, ctx);
 			GR_MAT_TMP_INIT_SHALLOW_TRANSPOSE(TT, T, ctx);
 			GR_MAT_TMP_INIT_SHALLOW_TRANSPOSE(VT, V, ctx);
-			gr_mat_window_init(W1, W1st, 0, 0, VT->r, Rblock3->c, ctx);
+			gr_mat_window_init(W1, scratch, 0, 0, VT->r, Rblock3->c, ctx);
 			STAT(gr_mat_mul(W1, VT, Rblock3, ctx));
-			gr_mat_window_init(W2, W2st, 0, 0, TT->r, W1->c, ctx);
-			STAT(gr_mat_mul(W2, TT, W1, ctx));
-			gr_mat_window_init(W3, W3st, 0, 0, V->r, W2->c, ctx);
-			STAT(gr_mat_mul(W3, V, W2, ctx)); 
+			STAT(gr_mat_mul(W1, TT, W1, ctx));
+			gr_mat_window_init(W3, scratch2, 0, 0, V->r, W1->c, ctx);
+			STAT(gr_mat_mul(W3, V, W1, ctx)); 
 			STAT(gr_mat_sub(Rblock3, Rblock3, W3, ctx));
 			GR_MAT_TMP_CLEAR_SHALLOW_TRANSPOSE(TT,ctx);
 			GR_MAT_TMP_CLEAR_SHALLOW_TRANSPOSE(VT,ctx);
 			gr_mat_window_clear(Rblock3, ctx);
 			gr_mat_window_clear(W1, ctx);
-			gr_mat_window_clear(W2, ctx);
 			gr_mat_window_clear(W3, ctx);
 		}
 		gr_mat_window_clear(V, ctx);
@@ -210,6 +207,7 @@ void house_lq_qr(gr_mat_t RT, gr_mat_t A, gr_ctx_t ctx, unsigned block){
                 gr_mat_window_clear(temp, ctx);
             }
             {//R[] -= tau * np.outer(R[]@u,u) (-= tau * (R[] @ u.T) @u)
+			//todo: do it manually (rank 1 updates are much faster than multiple mat muls)
 				gr_mat_t wtemp, outer;
 				gr_mat_window_init(wtemp, scratch, 0, 0, Rblock1->r, uT->c, ctx);
 				STAT(gr_mat_mul(wtemp, Rblock1, uT, ctx));

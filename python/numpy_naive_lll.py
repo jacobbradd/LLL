@@ -7,6 +7,7 @@ OUTPUT of LLL:
 """
 
 import numpy as np
+from primitives.cholesky import qr_cholesky
 
 # Todo: express as calls to Babai
 def size_reduce(B, R, k):
